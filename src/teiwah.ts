@@ -186,6 +186,25 @@ function assertNonEmpty(value: string, field: string): void {
   }
 }
 
+/**
+ * Validate the current Teiwah session API key structure before sending.
+ */
+const TEIWAH_SESSION_API_KEY_PATTERN = /^zpka_[0-9a-f]{32}_[0-9a-f]{8}$/;
+
+function assertValidSessionApiKey(value: string): void {
+  assertNonEmpty(value, "apiKey");
+
+  if (value !== value.trim()) {
+    throw new TypeError("apiKey must not contain leading or trailing whitespace");
+  }
+
+  if (!TEIWAH_SESSION_API_KEY_PATTERN.test(value)) {
+    throw new TypeError(
+      "apiKey must be a valid Teiwah session API key",
+    );
+  }
+}
+
 function assertMediaSource(request: MediaSource): void {
   const hasUrl = "url" in request && request.url !== undefined;
   const hasBase64 = "base64" in request && request.base64 !== undefined;
@@ -250,11 +269,11 @@ export class Teiwah {
       ? configuredApiKey
       : async () => {
         const resolved = await configuredApiKey();
-        assertNonEmpty(resolved, "apiKey");
+        assertValidSessionApiKey(resolved);
         return resolved;
       };
     if (typeof apiKey === "string") {
-      assertNonEmpty(apiKey, "apiKey");
+      assertValidSessionApiKey(apiKey);
     }
     this.#client = new GeneratedTeiwah({
       ...clientOptions,

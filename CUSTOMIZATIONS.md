@@ -13,6 +13,7 @@ regeneration:
 The public façade intentionally:
 
 - accepts `apiKey` instead of the generated `sessionApiKey` name;
+- validates the current Teiwah session API key format before making a request;
 - exposes top-level methods such as `sendText()` and `sendPtt()`;
 - forces automatic retries off to prevent duplicate WhatsApp sends;
 - rejects browser usage so session API keys are not exposed;

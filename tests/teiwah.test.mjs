@@ -3,9 +3,20 @@ import test from "node:test";
 
 import { HTTPClient, Teiwah } from "../dist/esm/index.js";
 
+const VALID_TEST_API_KEY =
+  "zpka_00000000000000000000000000000000_00000000";
+
+// Invalid variants — each exercises a different validation failure.
+const BAD_PREFIX_API_KEY = `y${VALID_TEST_API_KEY}`;
+const WHITESPACE_API_KEY = ` ${VALID_TEST_API_KEY}`;
+const TRUNCATED_BODY_API_KEY =
+  "zpka_0000000000000000000000000000000_00000000";
+const TRUNCATED_CHECKSUM_API_KEY =
+  "zpka_00000000000000000000000000000000_0000000";
+
 function createClient(fetcher) {
   return new Teiwah({
-    apiKey: "test-session-key",
+    apiKey: VALID_TEST_API_KEY,
     httpClient: new HTTPClient({ fetcher }),
   });
 }
@@ -60,7 +71,8 @@ test("maps top-level send helpers to the message endpoint", async () => {
   assert.ok(requests.every(({ pathname }) => pathname === "/messages"));
   assert.ok(
     requests.every(
-      ({ authorization }) => authorization === "Bearer test-session-key",
+      ({ authorization }) =>
+        authorization === `Bearer ${VALID_TEST_API_KEY}`,
     ),
   );
   assert.deepEqual(requests[1].body, {
@@ -123,6 +135,41 @@ test("never retries a send after an ambiguous transport failure", async () => {
     ),
   );
   assert.equal(attempts, 1);
+});
+
+test("rejects invalid session API keys at construction", () => {
+  assert.throws(
+    () =>
+      new Teiwah({
+        apiKey: BAD_PREFIX_API_KEY,
+      }),
+    /apiKey must be a valid Teiwah session API key/,
+  );
+  assert.throws(
+    () => new Teiwah({ apiKey: "not-a-key" }),
+    /apiKey must be a valid Teiwah session API key/,
+  );
+  assert.throws(
+    () =>
+      new Teiwah({
+        apiKey: WHITESPACE_API_KEY,
+      }),
+    /apiKey must not contain leading or trailing whitespace/,
+  );
+  assert.throws(
+    () =>
+      new Teiwah({
+        apiKey: TRUNCATED_BODY_API_KEY,
+      }),
+    /apiKey must be a valid Teiwah session API key/,
+  );
+  assert.throws(
+    () =>
+      new Teiwah({
+        apiKey: TRUNCATED_CHECKSUM_API_KEY,
+      }),
+    /apiKey must be a valid Teiwah session API key/,
+  );
 });
 
 test("rejects invalid inputs before making a request", () => {
