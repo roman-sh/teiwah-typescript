@@ -159,11 +159,9 @@ export type InboundMediaMessage = InboundMessageBase & {
  *   case "text" in message:
  *     // Handle text message.
  *     break;
- *
  *   case "media" in message:
  *     // Handle media message.
  *     break;
- *
  *   default:
  *     // Handle unsupported message.
  * }
