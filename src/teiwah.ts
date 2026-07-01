@@ -210,14 +210,18 @@ export class Teiwah {
    * Prefer the type-specific helpers such as {@link sendText} and
    * {@link sendImage} when possible.
    *
-   * **Required:** `chatId` and exactly one of `text` or `media`
+   * **Required:**
    *
-   * **Optional:** `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `text` or `media` — Message content; choose exactly one.
    *
-   * **Media source:** exactly one of `media.url` or `media.base64`
+   * **Optional:**
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID.
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * When using media, provide exactly one of *media.url* or *media.base64*.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendMessage({
@@ -245,12 +249,16 @@ export class Teiwah {
   /**
    * Send a text message.
    *
-   * **Required:** `chatId`, `text`
+   * **Required:**
    *
-   * **Optional:** `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `text` — Text to send.
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID. Use an inbound webhook's `chatId` unchanged when replying.
+   * **Optional:**
+   *
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendText({
@@ -269,15 +277,20 @@ export class Teiwah {
   /**
    * Send an image from a public URL or base64 bytes.
    *
-   * **Required:** `chatId` and exactly one of `url` or `base64`
+   * **Required:**
    *
-   * **Optional:** `caption`, `mimeType`, `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `url` or `base64` — Public image URL or base64 bytes; choose one.
    *
-   * **Notes:** `url` must be public HTTP(S); base64 is limited to 16 MB
-   * decoded. Teiwah derives `mimeType` when omitted.
+   * **Optional:**
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID.
+   * - `caption` — Image caption.
+   * - `mimeType` — Override the inferred MIME type.
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * Base64 input is limited to 16 MB decoded.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendImage({
@@ -296,15 +309,19 @@ export class Teiwah {
   /**
    * Send a WhatsApp push-to-talk voice message.
    *
-   * **Required:** `chatId` and exactly one of `url` or `base64`
+   * **Required:**
    *
-   * **Optional:** `mimeType`, `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `url` or `base64` — Public audio URL or base64 bytes; choose one.
    *
-   * **Notes:** `url` must be public HTTP(S); base64 is limited to 16 MB
-   * decoded. Teiwah derives `mimeType` when omitted.
+   * **Optional:**
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID.
+   * - `mimeType` — Override the inferred MIME type.
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * Base64 input is limited to 16 MB decoded.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendPtt({
@@ -323,15 +340,20 @@ export class Teiwah {
   /**
    * Send a generic audio attachment rather than a voice-note bubble.
    *
-   * **Required:** `chatId` and exactly one of `url` or `base64`
+   * **Required:**
    *
-   * **Optional:** `mimeType`, `filename`, `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `url` or `base64` — Public audio URL or base64 bytes; choose one.
    *
-   * **Notes:** `url` must be public HTTP(S); base64 is limited to 16 MB
-   * decoded. Teiwah derives `mimeType` when omitted.
+   * **Optional:**
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID.
+   * - `mimeType` — Override the inferred MIME type.
+   * - `filename` — Override the filename.
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * Base64 input is limited to 16 MB decoded.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendAudio({
@@ -350,15 +372,21 @@ export class Teiwah {
   /**
    * Send a video from a public URL or base64 bytes.
    *
-   * **Required:** `chatId` and exactly one of `url` or `base64`
+   * **Required:**
    *
-   * **Optional:** `caption`, `mimeType`, `filename`, `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `url` or `base64` — Public video URL or base64 bytes; choose one.
    *
-   * **Notes:** `url` must be public HTTP(S); base64 is limited to 16 MB
-   * decoded. Teiwah derives `mimeType` when omitted.
+   * **Optional:**
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID.
+   * - `caption` — Video caption.
+   * - `mimeType` — Override the inferred MIME type.
+   * - `filename` — Override the filename.
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * Base64 input is limited to 16 MB decoded.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendVideo({
@@ -377,15 +405,21 @@ export class Teiwah {
   /**
    * Send a document from a public URL or base64 bytes.
    *
-   * **Required:** `chatId` and exactly one of `url` or `base64`
+   * **Required:**
    *
-   * **Optional:** `caption`, `mimeType`, `filename`, `quoteMessageId`
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
+   * - `url` or `base64` — Public document URL or base64 bytes; choose one.
    *
-   * **Notes:** `url` must be public HTTP(S); base64 is limited to 16 MB
-   * decoded. Teiwah derives `mimeType` and `filename` when omitted.
+   * **Optional:**
    *
-   * **Returns:** `{ success: true, id }`, where `id` is the sent WhatsApp
-   * message ID.
+   * - `caption` — Document caption.
+   * - `mimeType` — Override the inferred MIME type.
+   * - `filename` — Override the inferred filename.
+   * - `quoteMessageId` — Message ID to quote.
+   *
+   * Base64 input is limited to 16 MB decoded.
+   *
+   * **Returns:** `{ success: true, id }`
    *
    * ```ts
    * await teiwah.sendDocument({
@@ -404,7 +438,9 @@ export class Teiwah {
   /**
    * Mark an inbound WhatsApp message as read.
    *
-   * **Required:** `messageId` — use the inbound webhook `id`
+   * **Required:**
+   *
+   * - `messageId` — Use the inbound webhook *id*.
    *
    * **Returns:** `{ success: true }`
    *
@@ -426,7 +462,9 @@ export class Teiwah {
   /**
    * Show the typing indicator for a conversation.
    *
-   * **Required:** `chatId` — use the inbound webhook value unchanged
+   * **Required:**
+   *
+   * - `chatId` — Conversation address; reuse inbound *chatId*.
    *
    * **Returns:** `{ success: true }`
    *
@@ -450,7 +488,9 @@ export class Teiwah {
    * Voice notes already include inline `base64`, so this is normally used for
    * images, audio, videos, and documents.
    *
-   * **Required:** `id` — use the inbound media message's `id`
+   * **Required:**
+   *
+   * - `id` — Use the inbound media message's *id*.
    *
    * **Returns:** decrypted byte stream in `result`, plus response `headers`
    *
