@@ -108,7 +108,10 @@ export type InboundVoiceNote = {
   url: string;
   /** Detected MIME type, or null when unavailable. */
   mimeType: string | null;
-  /** Inline base64 voice-note bytes for immediate transcription. */
+  /**
+   * Inline base64 voice-note bytes for immediate transcription. Normally
+   * present; absent only when the immediate WhatsApp media download fails.
+   */
   base64?: string;
 };
 
@@ -151,8 +154,9 @@ export type InboundMediaMessage = InboundMessageBase & {
  *
  * - `media` — Image, audio, video, document, or PTT voice note.
  *
- * PTT includes inline *base64* for immediate transcription. Other media is
- * downloaded through *media.url*.
+ * PTT normally includes inline *base64* for immediate transcription; it is
+ * absent only if the immediate WhatsApp media download fails. *media.url*
+ * remains available as a fallback. Other media is downloaded through its URL.
  *
  * ```ts
  * switch (true) {
