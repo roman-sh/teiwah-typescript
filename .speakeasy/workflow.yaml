@@ -1,0 +1,19 @@
+workflowVersion: 1.0.0
+speakeasyVersion: latest
+sources:
+    Teiwah Message API:
+        inputs:
+            - location: ./openapi.yaml
+        output: .speakeasy/out.openapi.yaml
+        registry:
+            location: registry.speakeasyapi.dev/teivah-solutions/teiwah/teiwah-message-api
+targets:
+    teiwah:
+        target: typescript
+        source: Teiwah Message API
+        codeSamples:
+            registry:
+                location: registry.speakeasyapi.dev/teivah-solutions/teiwah/teiwah-message-api-typescript-code-samples
+            labelOverride:
+                fixedValue: Typescript (SDK)
+            blocking: false

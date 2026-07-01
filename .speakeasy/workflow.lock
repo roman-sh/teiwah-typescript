@@ -1,0 +1,37 @@
+speakeasyVersion: 1.787.0
+sources:
+    Teiwah Message API:
+        sourceNamespace: teiwah-message-api
+        sourceRevisionDigest: sha256:cdcf2cb7f14a63bc77fc8d4b6278f6a82e6de3e2a8f39c593d98620f074110e4
+        sourceBlobDigest: sha256:c1652f913cf28c8c0640ac111cb5046697394225fe2306fbb3b9b9a6d7dddac6
+        tags:
+            - latest
+            - 1.0.0
+targets:
+    teiwah:
+        source: Teiwah Message API
+        sourceNamespace: teiwah-message-api
+        sourceRevisionDigest: sha256:cdcf2cb7f14a63bc77fc8d4b6278f6a82e6de3e2a8f39c593d98620f074110e4
+        sourceBlobDigest: sha256:c1652f913cf28c8c0640ac111cb5046697394225fe2306fbb3b9b9a6d7dddac6
+        codeSamplesNamespace: teiwah-message-api-typescript-code-samples
+        codeSamplesRevisionDigest: sha256:c7c1a6779b5688282415ca4fff72950f1563afb0a9e04f999303de97be164c94
+workflow:
+    workflowVersion: 1.0.0
+    speakeasyVersion: latest
+    sources:
+        Teiwah Message API:
+            inputs:
+                - location: ./openapi.yaml
+            output: .speakeasy/out.openapi.yaml
+            registry:
+                location: registry.speakeasyapi.dev/teivah-solutions/teiwah/teiwah-message-api
+    targets:
+        teiwah:
+            target: typescript
+            source: Teiwah Message API
+            codeSamples:
+                registry:
+                    location: registry.speakeasyapi.dev/teivah-solutions/teiwah/teiwah-message-api-typescript-code-samples
+                labelOverride:
+                    fixedValue: Typescript (SDK)
+                blocking: false

@@ -1,0 +1,697 @@
+openapi: 3.1.0
+
+info:
+  title: Teiwah Message API
+  version: 1.0.0
+  description: |
+    Send and receive WhatsApp messages through a small, session-scoped HTTP API.
+
+    Each API request uses a session API key as a Bearer token. The key identifies
+    one connected WhatsApp session. Dashboard and session-management operations
+    are intentionally outside this specification.
+
+    An outbound message is addressed by `chatId` and contains exactly one of a
+    top-level `text` value or a `media` object. Inbound messages are delivered to
+    the webhook configured for the session and use the same `chatId`; pass it
+    back unchanged to reply.
+  contact:
+    name: Teiwah
+    url: https://teiwah.cloud
+
+servers:
+  - url: https://api.teiwah.cloud
+    description: Production
+
+security:
+  - sessionApiKey: []
+
+tags:
+  - name: Messages
+    description: Send outbound WhatsApp messages.
+  - name: Chat actions
+    description: Send typing indicators and read receipts.
+  - name: Media
+    description: Download media referenced by inbound webhooks.
+
+paths:
+  /messages:
+    post:
+      tags: [Messages]
+      operationId: sendMessage
+      summary: Send a message
+      description: |
+        Sends a text or media message from the WhatsApp session identified by
+        the API key.
+
+        `quoteMessageId` may reference an inbound message ID or the ID returned
+        by an earlier send. Quoting is best-effort: if the ID is unknown or has
+        left the recent-message cache, the message is sent without a quote.
+
+        A cold one-to-one send to a contact who has not previously engaged the
+        connected account is rejected with 403. Group sends are not subject to
+        this trusted-contact restriction.
+
+        Clients must not automatically retry this operation. A transport or
+        server failure can be ambiguous: WhatsApp may have accepted the message
+        even when Teiwah could not return a usable response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+            examples:
+              text:
+                summary: Text message
+                value:
+                  chatId: "972501234567"
+                  text: Hello from Teiwah
+              imageByUrl:
+                summary: Image from a URL
+                value:
+                  chatId: "972501234567"
+                  media:
+                    type: image
+                    url: https://example.com/photo.jpg
+                    caption: Look at this
+              voiceNoteByBase64:
+                summary: Voice note supplied as base64
+                value:
+                  chatId: "972501234567@s.whatsapp.net"
+                  media:
+                    type: ptt
+                    base64: T2dnUwACAAAAAAAAAAA...
+                    mimeType: audio/ogg
+              quotedReply:
+                summary: Text reply quoting an earlier message
+                value:
+                  chatId: "120363012345678901@g.us"
+                  text: Got it, thanks!
+                  quoteMessageId: 3EB0C767D7A0D9D8F8A1
+      responses:
+        "200":
+          description: Message accepted by WhatsApp with a native message ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendMessageResponse"
+              example:
+                success: true
+                id: 3EB0C767D7A0D9D8F8A1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Cold one-to-one reach-out to an untrusted contact.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                statusCode: 403
+                message: Cannot start a new conversation with this contact; they must message you first
+                error: Forbidden
+        "413":
+          description: Decoded base64 media exceeds 16 MB.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: media.base64 exceeds the 16 MB decoded limit; use media.url instead
+        "422":
+          description: The supplied media URL could not be fetched at send time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/SessionOffline"
+        "5XX":
+          $ref: "#/components/responses/ServerFailure"
+
+  /typing:
+    post:
+      tags: [Chat actions]
+      operationId: sendTypingIndicator
+      summary: Show the typing indicator
+      description: |
+        Shows the WhatsApp typing indicator for a conversation. Call this shortly
+        before replying. There is no stop operation; WhatsApp clears the indicator
+        automatically after roughly 25 seconds or when a message is sent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TypingRequest"
+            example:
+              chatId: "972501234567@s.whatsapp.net"
+      responses:
+        "200":
+          description: Typing indicator sent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/SessionOffline"
+        "5XX":
+          $ref: "#/components/responses/ServerFailure"
+
+  /read:
+    post:
+      tags: [Chat actions]
+      operationId: markMessageRead
+      summary: Mark an inbound message as read
+      description: |
+        Sends a WhatsApp read receipt for an inbound message. Supply the native
+        `id` from the webhook as `messageId`. Teiwah resolves the full WhatsApp
+        message key from its recent-message cache.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadRequest"
+            example:
+              messageId: 3EB0C767D7A0D9D8F8A1
+      responses:
+        "200":
+          description: Read receipt sent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Message ID is unknown or no longer in the recent-message cache.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/SessionOffline"
+        "5XX":
+          $ref: "#/components/responses/ServerFailure"
+
+  /media/{id}:
+    get:
+      tags: [Media]
+      operationId: downloadMedia
+      summary: Download inbound media
+      description: |
+        Downloads and decrypts media referenced by an inbound webhook. Use the
+        media message's native `id`, which is also the final path segment in the
+        webhook's `media.url`.
+
+        The response Content-Type is the original media type when available and
+        Content-Disposition contains the original or derived filename.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Native ID of an inbound media message.
+          schema:
+            $ref: "#/components/schemas/MessageId"
+      responses:
+        "200":
+          description: Decrypted media bytes.
+          headers:
+            Content-Disposition:
+              description: Inline disposition with the original or derived filename.
+              schema:
+                type: string
+            Content-Length:
+              description: Response size in bytes.
+              schema:
+                type: integer
+                format: int64
+                minimum: 0
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Message is unknown, expired from the cache, or contains no downloadable media.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/SessionOffline"
+        "5XX":
+          $ref: "#/components/responses/ServerFailure"
+
+webhooks:
+  inboundMessage:
+    post:
+      tags: [Messages]
+      operationId: receiveInboundMessage
+      summary: Receive an inbound message
+      security: []
+      description: |
+        Teiwah makes one real-time POST request to the webhook configured for the
+        session. Delivery is best-effort: failed requests and non-2xx responses
+        are logged but are not retried or queued for later delivery.
+
+        In a one-to-one conversation, `chatId` identifies the sender/conversation
+        and `participant` is null. In a group, `chatId` identifies the group and
+        `participant` identifies the individual sender. Pass `chatId` unchanged
+        to `POST /messages` to reply to the conversation.
+
+        Consumers should deduplicate using `id`. The optional `raw` field is an
+        unstable Baileys escape hatch and is excluded from compatibility guarantees.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InboundMessage"
+            examples:
+              directText:
+                summary: Direct text message
+                value:
+                  sessionId: happy-otter-1a2b
+                  id: 3EB0C767D7A0D9D8F8A1
+                  chatId: "972501234567@s.whatsapp.net"
+                  participant: null
+                  contact:
+                    name: Roman S.
+                    phoneNumber: "972501234567"
+                  timestamp: 1749420000
+                  text: Hello
+              groupText:
+                summary: Group text message
+                value:
+                  sessionId: happy-otter-1a2b
+                  id: 3EB0C767D7A0D9D8F8A1
+                  chatId: "120363012345678901@g.us"
+                  participant: "972501234567@s.whatsapp.net"
+                  contact:
+                    name: Roman S.
+                    phoneNumber: "972501234567"
+                  timestamp: 1749420000
+                  text: Hello everyone
+              voiceNote:
+                summary: Voice note with best-effort inline bytes
+                value:
+                  sessionId: happy-otter-1a2b
+                  id: 3EB0C767D7A0D9D8F8A1
+                  chatId: "972501234567@s.whatsapp.net"
+                  participant: null
+                  contact:
+                    name: Roman S.
+                    phoneNumber: "972501234567"
+                  timestamp: 1749420000
+                  media:
+                    type: ptt
+                    url: https://api.teiwah.cloud/media/3EB0C767D7A0D9D8F8A1
+                    mimeType: audio/ogg
+                    base64: T2dnUwACAAAAAAAAAAA...
+      responses:
+        "2XX":
+          description: Any 2xx response acknowledges the delivery attempt.
+
+components:
+  securitySchemes:
+    sessionApiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: Teiwah session API key
+      description: API key issued for one WhatsApp session by the Teiwah dashboard.
+
+  responses:
+    BadRequest:
+      description: Malformed JSON or request validation failure.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            validation:
+              value:
+                statusCode: 400
+                message:
+                  - chatId must be a valid phone number or WhatsApp address
+                error: Bad Request
+            gatewayValidation:
+              value:
+                message: Provide exactly one of media.url or media.base64
+
+    Unauthorized:
+      description: Session API key is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: Unauthorized
+
+    SessionOffline:
+      description: WhatsApp session is not currently connected.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            statusCode: 503
+            message: Session is not connected
+            error: Service Unavailable
+
+    ServerFailure:
+      description: Unexpected Teiwah, gateway, storage, or upstream failure.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ChatId:
+      type: string
+      minLength: 1
+      description: |
+        WhatsApp conversation address. A bare international phone number, a
+        phone-number JID (`@s.whatsapp.net`), a LID (`@lid`), or a group JID
+        (`@g.us`). Use the inbound webhook `chatId` unchanged when replying.
+      examples:
+        - "972501234567"
+        - "972501234567@s.whatsapp.net"
+        - "123456789012345@lid"
+        - "120363012345678901@g.us"
+
+    MessageId:
+      type: string
+      minLength: 1
+      description: Native WhatsApp/Baileys message identifier.
+      example: 3EB0C767D7A0D9D8F8A1
+
+    MediaType:
+      type: string
+      enum: [image, ptt, audio, video, document]
+      description: '`ptt` is a WhatsApp voice note; `audio` is a generic audio attachment.'
+
+    SendMessageRequest:
+      title: Send message request
+      description: Exactly one of the text and media request variants.
+      oneOf:
+        - $ref: "#/components/schemas/SendTextMessageRequest"
+        - $ref: "#/components/schemas/SendMediaMessageRequest"
+
+    SendTextMessageRequest:
+      title: Send text message
+      type: object
+      additionalProperties: false
+      required: [chatId, text]
+      properties:
+        chatId:
+          $ref: "#/components/schemas/ChatId"
+        text:
+          type: string
+          minLength: 1
+          description: Message text after surrounding whitespace is trimmed.
+        quoteMessageId:
+          $ref: "#/components/schemas/MessageId"
+
+    SendMediaMessageRequest:
+      title: Send media message
+      type: object
+      additionalProperties: false
+      required: [chatId, media]
+      properties:
+        chatId:
+          $ref: "#/components/schemas/ChatId"
+        media:
+          $ref: "#/components/schemas/OutboundMedia"
+        quoteMessageId:
+          $ref: "#/components/schemas/MessageId"
+
+    OutboundMedia:
+      title: Outbound media
+      description: Supply exactly one URL or base64 source.
+      oneOf:
+        - $ref: "#/components/schemas/OutboundMediaByUrl"
+        - $ref: "#/components/schemas/OutboundMediaByBase64"
+
+    OutboundMediaByUrl:
+      title: Outbound media by URL
+      type: object
+      additionalProperties: false
+      required: [type, url]
+      properties:
+        type:
+          $ref: "#/components/schemas/MediaType"
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Publicly fetchable media URL.
+          example: https://example.com/photo.jpg
+        caption:
+          type: string
+          description: Optional caption, primarily for image, video, and document messages.
+        mimeType:
+          type: string
+          description: Optional MIME override; normally inferred from the URL or content.
+          example: image/jpeg
+        filename:
+          type: string
+          description: Optional filename, primarily for document messages.
+
+    OutboundMediaByBase64:
+      title: Outbound media by base64
+      type: object
+      additionalProperties: false
+      required: [type, base64]
+      properties:
+        type:
+          $ref: "#/components/schemas/MediaType"
+        base64:
+          type: string
+          format: byte
+          minLength: 1
+          description: Plain base64-encoded bytes, limited to 16 MB after decoding. Data URIs are not accepted.
+        caption:
+          type: string
+          description: Optional caption, primarily for image, video, and document messages.
+        mimeType:
+          type: string
+          description: Optional MIME type used when staging the temporary media object.
+          example: audio/ogg
+        filename:
+          type: string
+          description: Optional filename, primarily for document messages.
+
+    SendMessageResponse:
+      type: object
+      additionalProperties: false
+      required: [success, id]
+      properties:
+        success:
+          type: boolean
+          const: true
+        id:
+          $ref: "#/components/schemas/MessageId"
+
+    TypingRequest:
+      type: object
+      additionalProperties: false
+      required: [chatId]
+      properties:
+        chatId:
+          $ref: "#/components/schemas/ChatId"
+
+    ReadRequest:
+      type: object
+      additionalProperties: false
+      required: [messageId]
+      properties:
+        messageId:
+          $ref: "#/components/schemas/MessageId"
+
+    SuccessResponse:
+      type: object
+      additionalProperties: false
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+
+    Contact:
+      type: object
+      additionalProperties: false
+      required: [name, phoneNumber]
+      description: Best-effort sender identity metadata; never use this object as the reply target.
+      properties:
+        name:
+          type: [string, "null"]
+          description: Sender's WhatsApp display name when available.
+          example: Roman S.
+        phoneNumber:
+          type: [string, "null"]
+          description: Bare phone number when WhatsApp supplies a phone-number mapping.
+          example: "972501234567"
+
+    InboundMessage:
+      title: Inbound webhook message
+      description: Exactly one of the text and media webhook variants.
+      oneOf:
+        - $ref: "#/components/schemas/InboundTextMessage"
+        - $ref: "#/components/schemas/InboundMediaMessage"
+
+    InboundTextMessage:
+      title: Inbound text message
+      type: object
+      additionalProperties: false
+      required: [sessionId, id, chatId, participant, contact, timestamp, text]
+      properties:
+        sessionId:
+          type: string
+          minLength: 1
+          description: Teiwah session that received the message.
+          example: happy-otter-1a2b
+        id:
+          $ref: "#/components/schemas/MessageId"
+        chatId:
+          $ref: "#/components/schemas/ChatId"
+        participant:
+          $ref: "#/components/schemas/Participant"
+        contact:
+          $ref: "#/components/schemas/Contact"
+        timestamp:
+          $ref: "#/components/schemas/UnixTimestamp"
+        text:
+          type: string
+          minLength: 1
+        raw:
+          $ref: "#/components/schemas/RawBaileysMessage"
+
+    InboundMediaMessage:
+      title: Inbound media message
+      type: object
+      additionalProperties: false
+      required: [sessionId, id, chatId, participant, contact, timestamp, media]
+      properties:
+        sessionId:
+          type: string
+          minLength: 1
+          description: Teiwah session that received the message.
+          example: happy-otter-1a2b
+        id:
+          $ref: "#/components/schemas/MessageId"
+        chatId:
+          $ref: "#/components/schemas/ChatId"
+        participant:
+          $ref: "#/components/schemas/Participant"
+        contact:
+          $ref: "#/components/schemas/Contact"
+        timestamp:
+          $ref: "#/components/schemas/UnixTimestamp"
+        media:
+          $ref: "#/components/schemas/InboundMedia"
+        raw:
+          $ref: "#/components/schemas/RawBaileysMessage"
+
+    Participant:
+      type: [string, "null"]
+      description: Individual sender address in a group; null for a direct conversation.
+      example: null
+
+    UnixTimestamp:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Unix timestamp in seconds.
+      example: 1749420000
+
+    InboundMedia:
+      title: Inbound media
+      oneOf:
+        - $ref: "#/components/schemas/InboundPttMedia"
+        - $ref: "#/components/schemas/InboundStandardMedia"
+
+    InboundPttMedia:
+      title: Inbound voice note
+      type: object
+      additionalProperties: false
+      required: [type, url, mimeType]
+      properties:
+        type:
+          type: string
+          const: ptt
+        url:
+          type: string
+          format: uri
+          description: Authenticated Teiwah media download URL.
+        mimeType:
+          type: [string, "null"]
+          description: WhatsApp-provided MIME type when available.
+          example: audio/ogg
+        base64:
+          type: string
+          format: byte
+          description: Best-effort inline bytes. May be absent when eager download fails; use `url` as fallback.
+
+    InboundStandardMedia:
+      title: Inbound image, audio, video, or document
+      type: object
+      additionalProperties: false
+      required: [type, url, mimeType]
+      properties:
+        type:
+          type: string
+          enum: [image, audio, video, document]
+        url:
+          type: string
+          format: uri
+          description: Authenticated Teiwah media download URL.
+        mimeType:
+          type: [string, "null"]
+          description: WhatsApp-provided MIME type when available.
+          example: image/jpeg
+        filename:
+          type: [string, "null"]
+          description: Original filename when supplied by WhatsApp, primarily for documents.
+        caption:
+          type: [string, "null"]
+          description: Caption when supplied, primarily for image, video, and document messages.
+
+    RawBaileysMessage:
+      type: object
+      additionalProperties: true
+      description: Unstable original Baileys payload. Its shape may change without notice.
+
+    ErrorResponse:
+      type: object
+      required: [message]
+      additionalProperties: true
+      description: |
+        Gateway errors may contain only `message`; Nest errors generally also
+        contain `statusCode` and `error`. Validation errors may return an array
+        of messages.
+      properties:
+        statusCode:
+          type: integer
+          minimum: 400
+          maximum: 599
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              minItems: 1
+              items:
+                type: string
+        error:
+          type: string
