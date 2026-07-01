@@ -155,10 +155,17 @@ export type InboundMediaMessage = InboundMessageBase & {
  * downloaded through *media.url*.
  *
  * ```ts
- * if ("text" in message) {
- *   console.log(message.text);
- * } else {
- *   console.log(message.media.type, message.media.url);
+ * switch (true) {
+ *   case "text" in message:
+ *     // Handle text message.
+ *     break;
+ *
+ *   case "media" in message:
+ *     // Handle media message.
+ *     break;
+ *
+ *   default:
+ *     // Handle unsupported message.
  * }
  * ```
  */
