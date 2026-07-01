@@ -72,47 +72,96 @@ export type SendDocumentRequest = MessageTarget &
   };
 
 export type Contact = {
+  /** Best-effort WhatsApp display name. */
   name: string | null;
+  /** Bare phone number, or null when WhatsApp provides no mapping. */
   phoneNumber: string | null;
 };
 
 type InboundMessageBase = {
+  /** Teiwah session that received the message. */
   sessionId: string;
+  /** Native WhatsApp message ID for deduplication, quoting, and read receipts. */
   id: string;
+  /** Conversation reply address; pass it back unchanged when replying. */
   chatId: string;
+  /** Group sender address, or null in a one-to-one conversation. */
   participant: string | null;
+  /** Sender metadata; never use it as the reply target. */
   contact: Contact;
+  /** Unix timestamp in seconds. */
   timestamp: number;
   /** Unstable original Baileys payload. */
   raw?: Record<string, unknown>;
 };
 
 export type InboundTextMessage = InboundMessageBase & {
+  /** Received message text. */
   text: string;
   media?: never;
 };
 
 export type InboundVoiceNote = {
+  /** WhatsApp push-to-talk voice note. */
   type: "ptt";
+  /** URL for downloading the decrypted voice note. */
   url: string;
+  /** Detected MIME type, or null when unavailable. */
   mimeType: string | null;
+  /** Inline base64 voice-note bytes for immediate transcription. */
   base64?: string;
 };
 
 export type InboundStandardMedia = {
+  /** Received media kind. */
   type: "image" | "audio" | "video" | "document";
+  /** URL for downloading the decrypted media. */
   url: string;
+  /** Detected MIME type, or null when unavailable. */
   mimeType: string | null;
+  /** Original filename when available. */
   filename?: string | null;
+  /** Media caption when present. */
   caption?: string | null;
 };
 
 export type InboundMediaMessage = InboundMessageBase & {
+  /** Received image, audio, video, document, or voice note. */
   media: InboundVoiceNote | InboundStandardMedia;
   text?: never;
 };
 
-/** Payload delivered by Teiwah to a session's inbound webhook. */
+/**
+ * Payload delivered by Teiwah to a session's inbound webhook.
+ *
+ * **Common:**
+ *
+ * - `sessionId` — Teiwah session that received the message.
+ * - `id` — WhatsApp message ID for deduplication, quoting, and read receipts.
+ * - `chatId` — Conversation address; reuse inbound *chatId* when replying.
+ * - `participant` — Group sender address; `null` in one-to-one conversations.
+ * - `contact` — Sender name and phone number; not a reply target.
+ * - `timestamp` — Unix timestamp in seconds.
+ *
+ * **Text message:**
+ *
+ * - `text` — Received message text.
+ *
+ * **Media message:**
+ *
+ * - `media` — Image, audio, video, document, or PTT voice note.
+ *
+ * PTT includes inline *base64* for immediate transcription. Other media is
+ * downloaded through *media.url*.
+ *
+ * ```ts
+ * if ("text" in message) {
+ *   console.log(message.text);
+ * } else {
+ *   console.log(message.media.type, message.media.url);
+ * }
+ * ```
+ */
 export type InboundMessage = InboundTextMessage | InboundMediaMessage;
 
 type SendMediaRequest = MessageTarget &
