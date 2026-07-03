@@ -109,10 +109,9 @@ export type InboundVoiceNote = {
   /** Detected MIME type, or null when unavailable. */
   mimeType: string | null;
   /**
-   * Inline base64 voice-note bytes for immediate transcription. Normally
-   * present; absent only when the immediate WhatsApp media download fails.
+   * Required inline base64 voice-note bytes for immediate transcription.
    */
-  base64?: string;
+  base64: string;
 };
 
 export type InboundStandardMedia = {
@@ -154,9 +153,9 @@ export type InboundMediaMessage = InboundMessageBase & {
  *
  * - `media` — Image, audio, video, document, or PTT voice note.
  *
- * PTT normally includes inline *base64* for immediate transcription; it is
- * absent only if the immediate WhatsApp media download fails. *media.url*
- * remains available as a fallback. Other media is downloaded through its URL.
+ * PTT always includes inline *base64* for immediate transcription. If Teiwah
+ * cannot download and decrypt it, that PTT webhook is skipped rather than sent
+ * without bytes. Other media is downloaded through its URL.
  *
  * ```ts
  * switch (true) {

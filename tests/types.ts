@@ -1,6 +1,14 @@
-import { Teiwah } from "../src/index.js";
+import { Teiwah, type InboundMessage } from "../src/index.js";
 
 declare const teiwah: Teiwah;
+declare const inboundMessage: InboundMessage;
+
+switch (inboundMessage.media?.type) {
+  case "ptt": {
+    const base64: string = inboundMessage.media.base64;
+    void base64;
+  }
+}
 
 teiwah.sendImage({
   chatId: "120363012345678901@g.us",

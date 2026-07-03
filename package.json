@@ -1,6 +1,6 @@
 {
   "name": "teiwah",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "author": "Teiwah Solutions",
   "description": "Type-safe server-side SDK for the Teiwah WhatsApp messaging API.",
   "files": [

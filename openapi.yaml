@@ -266,6 +266,11 @@ webhooks:
         session. Delivery is best-effort: failed requests and non-2xx responses
         are logged but are not retried or queued for later delivery.
 
+        A PTT voice note is delivered only after Teiwah downloads and decrypts
+        it successfully, and its `media.base64` field is always present. If that
+        preparation fails, Teiwah skips the PTT webhook rather than delivering a
+        URL-only voice note.
+
         In a one-to-one conversation, `chatId` identifies the sender/conversation
         and `participant` is null. In a group, `chatId` identifies the group and
         `participant` identifies the individual sender. Pass `chatId` unchanged
@@ -305,7 +310,7 @@ webhooks:
                   timestamp: 1749420000
                   text: Hello everyone
               voiceNote:
-                summary: Voice note with best-effort inline bytes
+                summary: Voice note with required inline bytes
                 value:
                   sessionId: happy-otter-1a2b
                   id: 3EB0C767D7A0D9D8F8A1
@@ -626,7 +631,7 @@ components:
       title: Inbound voice note
       type: object
       additionalProperties: false
-      required: [type, url, mimeType]
+      required: [type, url, mimeType, base64]
       properties:
         type:
           type: string
@@ -642,7 +647,7 @@ components:
         base64:
           type: string
           format: byte
-          description: Best-effort inline bytes. May be absent when eager download fails; use `url` as fallback.
+          description: Required inline voice-note bytes for immediate processing.
 
     InboundStandardMedia:
       title: Inbound image, audio, video, or document
